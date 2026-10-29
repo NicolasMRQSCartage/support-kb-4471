@@ -1,0 +1,64 @@
+---
+layout: runbook
+title: '#4471 split · what the merged dates ticket holds'
+owner: support desk
+status: open
+reviewed: 2026-10-29
+signature: v1.eyJzdWIiOiIyMTg3IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYXQiOjE3OTMyNjM4OTgsImV4cCI6MTc5MzM1MDI5OH0.19UQKO41PmI1vU92evLDjEx99jdhOIURp2OLJtsz6vM
+---
+
+<script>
+  import SplitTable from '#lib/kb/SplitTable.svelte';
+  import TagDrift from '#lib/kb/TagDrift.svelte';
+  import Callout from '#lib/kb/Callout.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
+</script>
+
+[#4471](/kb/incidents/4471) says one issue and one fix. Its reports say otherwise. Merging on the
+subject line ([decision 0001](/kb/decisions/0001-dedupe-by-subject)) put every "wrong day" report
+in one ticket, whatever broke the date. Read by tenant, by booking form and by what the reporter
+describes, #4471 holds more than one problem, and each needs its own fix.
+
+<Callout kind="warn">
+The queued parser fix does not close #4471. It leaves the booking-v3 form hint and the one-day
+shifts open.
+</Callout>
+
+## The problems
+
+<SplitTable ticket={4471} />
+
+- **`parser`**: the shared parser reads every date month first. A day-first tenant gets day and
+  month swapped through the app, by email, and through booking-v2's form. This is the fix #4471
+  already queued.
+- **`hint`**: booking-v3's form prints `MM/DD/YYYY` under its date field, so the tenant's people
+  type month first, and the form reads the tenant's way, day first. Fixing the parser does not
+  touch this. The hint has to match how the form reads.
+- **`shift`**: the reports the desk read as a one-day move (desk notes). The date lands one day
+  early or late, and the same meeting shows on different days for people in different places. A
+  month-first parser cannot do that: it swaps day and month, it does not move a date by one.
+  It looks like a time zone problem, not a format problem.
+
+## How each report was placed
+
+1. One id, one report: the export repeats some rows, and each id counts once.
+2. The desk notes come first: a report the desk read as a one-day move is `shift`.
+3. Otherwise the tenant decides (`causes.ts`): a day-first tenant on booking-v3's form is
+   `hint`, every other day-first report is `parser`.
+4. A report with no tenant on file, or from a month-first tenant, stays `unplaced`.
+
+## Intake's tag is not the problem
+
+Intake tags a report from the reporter's browser the moment it arrives. The problem depends on
+the tenant and the form. Count by tag and the numbers come out wrong.
+
+<TagDrift ticket={4471} />
+
+## For the desk
+
+- Split by problem before you mark a ticket known. Same subject does not mean same cause.
+- Count tickets by unique id, not by rows in the export.
+- When a reporter describes a different shape (one day off, not a swap), it is a different bug,
+  even if the subject line matches.
+
+<RenderStamp {signature} />
